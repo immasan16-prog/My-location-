@@ -1,216 +1,310 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Alert,
+  Animated,
+  Easing,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const WINE = "#7D1733";
-const WINE_DEEP = "#21080F";
-const BLUSH = "#D94C68";
-const GOLD = "#F2C58A";
-const MUTED = "#D9AAB7";
-const GLASS = "rgba(255,255,255,0.10)";
+const SONG = require("../../assets/audio/aishalak.mp3");
+const PASSWORD = "1932024";
+const APK_URL = "https://github.com/immasan16-prog/My-location-/releases/latest/download/MyLove.apk";
+const STORAGE_KEY = "mylove_chat_messages_v1";
+const BG = "#10050D";
+const WINE = "#4B1028";
+const RUBY = "#A51F49";
+const PINK = "#F36A91";
+const GOLD = "#F5D19B";
+const SOFT = "#E9B6C8";
+const GLASS = "rgba(255,255,255,0.08)";
 const BORDER = "rgba(255,255,255,0.18)";
 
-// ضعي ملف الأغنية في assets/audio/ ثم استبدلي null بهذا السطر:
-// const SONG_SOURCE = require("../../assets/audio/aishalak.mp3");
-const SONG_SOURCE = null;
+type Gate = "password" | "stop" | "inside";
+type ChatMessage = { id: string; author: "أمونة" | "حمودي"; text: string; time: string; reaction?: string };
 
-const memories = [
-  { emoji: "✦", title: "أول نظرة", text: "اللحظة التي صار فيها كل شيء أجمل." },
-  { emoji: "♡", title: "ضحكتك", text: "تفصيل صغير، لكنه عالمي كله." },
-  { emoji: "∞", title: "وعدنا", text: "كل يوم جديد يكتب فصلًا لنا." },
-];
-
-function Snowflake({ index }: { index: number }) {
-  const fall = useRef(new Animated.Value(-40)).current;
-  const fade = useRef(new Animated.Value(0)).current;
-  const size = 8 + (index % 4) * 3;
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.sequence([
-        Animated.delay(index * 180),
-        Animated.parallel([
-          Animated.timing(fall, { toValue: 900, duration: 5200 + (index % 5) * 650, easing: Easing.linear, useNativeDriver: true }),
-          Animated.sequence([
-            Animated.timing(fade, { toValue: 0.8, duration: 500, useNativeDriver: true }),
-            Animated.delay(3000),
-            Animated.timing(fade, { toValue: 0, duration: 900, useNativeDriver: true }),
-          ]),
-        ]),
-        Animated.timing(fall, { toValue: -40, duration: 0, useNativeDriver: true }),
-      ]),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [fade, fall, index]);
-  return <Animated.Text style={[styles.snowflake, { left: 10 + ((index * 31) % 330), fontSize: size, opacity: fade, transform: [{ translateY: fall }] }]}>❄</Animated.Text>;
-}
-
-function Snowfall({ active }: { active: boolean }) {
-  if (!active) return null;
-  return <View pointerEvents="none" style={StyleSheet.absoluteFill}><View style={styles.snowLayer}>{Array.from({ length: 18 }, (_, index) => <Snowflake key={index} index={index} />)}</View></View>;
-}
-
-function Pulse({ active }: { active: boolean }) {
-  const scale = useRef(new Animated.Value(0.8)).current;
-  const opacity = useRef(new Animated.Value(0.55)).current;
-  useEffect(() => {
-    if (!active) { scale.stopAnimation(); opacity.stopAnimation(); scale.setValue(0.8); opacity.setValue(0.55); return; }
-    const loop = Animated.loop(Animated.parallel([
-      Animated.sequence([Animated.timing(scale, { toValue: 1.55, duration: 1350, easing: Easing.out(Easing.quad), useNativeDriver: true }), Animated.timing(scale, { toValue: 0.8, duration: 0, useNativeDriver: true })]),
-      Animated.sequence([Animated.timing(opacity, { toValue: 0, duration: 1350, useNativeDriver: true }), Animated.timing(opacity, { toValue: 0.55, duration: 0, useNativeDriver: true })]),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [active, opacity, scale]);
-  if (!active) return null;
-  return <Animated.View pointerEvents="none" style={[styles.pulseRing, { opacity, transform: [{ scale }] }]} />;
-}
-
-function MusicNotes({ active }: { active: boolean }) {
-  const notes = ["♪", "♫", "♬", "•", "♪"];
-  return <View pointerEvents="none" style={styles.notesLayer}>{active && notes.map((note, index) => <FloatingNote key={`${note}-${index}`} note={note} index={index} />)}</View>;
-}
-
-function FloatingNote({ note, index }: { note: string; index: number }) {
-  const progress = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.delay(index * 220),
-      Animated.timing(progress, { toValue: 1, duration: 1900 + index * 140, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(progress, { toValue: 0, duration: 0, useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [index, progress]);
-  return <Animated.Text style={[styles.floatingNote, { left: 12 + index * 28, opacity: progress.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 1, 0.8, 0] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [28, -55] }) }, { translateX: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, index % 2 ? -13 : 13, 0] }) }, { rotate: `${index % 2 ? -12 : 12}deg` }] }]}>{note}</Animated.Text>;
-}
+const romanticWords = ["عايشة", "لك", "أحلى", "سنين", "العمر", "يا ضي العين", "قلبي", "حنين", "غرام", "من أول يوم", "هواك", "حلمي", "أكون وياك", "عمري", "معاك", "باتمنك", "يا حبيبي", "بستناك", "قربني", "حبيبي", "شوقي", "حنان", "الأحزان", "روحي معاك", "قلبي مشغول"];
+const reactions = ["💗", "🥰", "😭", "💔", "🙃"];
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
-  const [liked, setLiked] = useState(false);
-  const [visualPlaying, setVisualPlaying] = useState(false);
-  const player = useAudioPlayer(SONG_SOURCE, { updateInterval: 500, downloadFirst: true });
+  const [gate, setGate] = useState<Gate>("password");
+  const [password, setPassword] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [error, setError] = useState("");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [lyric, setLyric] = useState("");
+  const [hearts, setHearts] = useState<number[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [selectedMessage, setSelectedMessage] = useState<string | null>(null);
+  const player = useAudioPlayer(SONG, { updateInterval: 250, downloadFirst: true });
   const status = useAudioPlayerStatus(player);
-  const contentWidth = Math.min(width - 36, 560);
-  const songReady = Boolean(SONG_SOURCE) && status.isLoaded;
-  const isPlaying = songReady ? status.playing : visualPlaying;
-  const relationshipLabel = useMemo(() => "3 سنوات", []);
-
-  const toggleMusic = () => {
-    if (songReady) {
-      if (status.playing) {
-        player.pause();
-        setVisualPlaying(false);
-      } else {
-        player.play();
-        setVisualPlaying(true);
-      }
-      return;
-    }
-    setVisualPlaying((value) => !value);
-  };
+  const contentWidth = Math.min(width - 28, 620);
 
   useEffect(() => {
-    if (songReady && status.didJustFinish) setVisualPlaying(false);
-  }, [songReady, status.didJustFinish]);
+    AsyncStorage.getItem(STORAGE_KEY).then((raw) => {
+      if (raw) setMessages(JSON.parse(raw));
+      else setMessages([{ id: "welcome", author: "أمونة", text: "إلى حمودي… هذه مساحتنا الصغيرة، لا تنسَ أنك أحب شيء عندي.", time: "الآن" }]);
+    });
+  }, []);
+
+  useEffect(() => {
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    if (!isPlaying) {
+      setLyric("");
+      setHearts([]);
+      return;
+    }
+    let index = 0;
+    setLyric(romanticWords[0]);
+    const interval = setInterval(() => {
+      setLyric(romanticWords[Math.floor(Math.random() * romanticWords.length)]);
+      setHearts((current) => [...current.slice(-5), Date.now()]);
+      index += 1;
+    }, 720);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (status.didJustFinish) setIsPlaying(false);
+  }, [status.didJustFinish]);
+
+  const toggleSong = () => {
+    if (status.playing) {
+      player.pause();
+      setIsPlaying(false);
+    } else {
+      player.play();
+      setIsPlaying(true);
+    }
+  };
+
+  const checkPassword = () => {
+    if (password === PASSWORD) {
+      setError("");
+      setGate("stop");
+    } else setError("كلمة المرور غير صحيحة");
+  };
+
+  const enterAfterStop = () => {
+    if (answer.trim() === "نعم") {
+      setError("");
+      setGate("inside");
+    } else setError("اكتبي نعم حتى أفتح لك المكان");
+  };
+
+  const sendMessage = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setMessages((current) => [...current, { id: `${Date.now()}`, author: "أمونة", text, time: "الآن" }]);
+    setDraft("");
+  };
+
+  const deleteMessage = (id: string) => {
+    setMessages((current) => current.filter((message) => message.id !== id));
+    setSelectedMessage(null);
+  };
+
+  const reactToMessage = (id: string, reaction: string) => {
+    setMessages((current) => current.map((message) => message.id === id ? { ...message, reaction: message.reaction === reaction ? undefined : reaction } : message));
+  };
+
+  if (gate === "password") return <GateScreen title="هذا المكان خاص" subtitle="لا يدخل إلا شخص واحد يعرف السر." value={password} setValue={setPassword} button="دخول" onSubmit={checkPassword} error={error} />;
+  if (gate === "stop") return <GateScreen title="توقف ✋" subtitle="هممم… انت حمودي؟" value={answer} setValue={setAnswer} button="نعم" onSubmit={enterAfterStop} error={error} answerMode />;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <Snowfall active={isPlaying} />
-      <MusicNotes active={isPlaying} />
-      <ScrollView contentContainerStyle={[styles.scroll, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.topRow}>
-          <View><Text style={styles.eyebrow}>إلى حمودي، حبيبي</Text><Text style={styles.brand}>My Love</Text></View>
-          <Pressable accessibilityRole="button" accessibilityLabel="تفضيل التطبيق" onPress={() => setLiked((value) => !value)} style={({ pressed }) => [styles.heartButton, pressed && styles.pressed]}><Text style={styles.heart}>{liked ? "♥" : "♡"}</Text></Pressable>
+      <AmbientSnow active={isPlaying} />
+      <ScrollView contentContainerStyle={[styles.page, { width: contentWidth }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View style={styles.nav}><View><Text style={styles.navOverline}>مساحتنا السرية</Text><Text style={styles.logo}>أمونة ♥ حمودي</Text></View><Pressable style={styles.lock}><Text>♡</Text></Pressable></View>
+        <View style={styles.hero}>
+          <Text style={styles.heroOverline}>من أمونة إلى حمودي</Text>
+          <Text style={styles.heroTitle}>بعض الحب لا يُحكى…{`\n`}بل يُعاش.</Text>
+          <Text style={styles.heroText}>كل ما في هذا المكان يشبهنا: هادئ، عميق، ولا يراه أحد سوانا.</Text>
+          <ShadowScene active={isPlaying} />
         </View>
-        <View style={styles.heroGlow} />
-        <View style={styles.heroCard}>
-          <Text style={styles.heroKicker}>رسالة اليوم</Text>
-          <Text style={styles.heroTitle}>أنت أجمل صدفة{`\n`}صارت لي قدرًا.</Text>
-          <Text style={styles.heroCopy}>هذا المكان صغير، لكنه يحمل لك كل الأشياء التي لا تكفيها رسالة واحدة.</Text>
-          <View style={styles.signatureRow}><View style={styles.avatar}><Text style={styles.avatarText}>♥</Text></View><Text style={styles.signature}>من أمونة إلى حمودي</Text></View>
+        <View style={styles.songSection}>
+          <View style={styles.sectionLine}><Text style={styles.sectionTitle}>عيشالك</Text><Text style={styles.sectionNote}>أغنيتنا إلى النهاية</Text></View>
+          <View style={styles.songCard}>
+            <View style={styles.vinyl}><View style={styles.vinylCenter}><Text style={styles.vinylNote}>♪</Text></View></View>
+            <View style={styles.songMeta}><Text style={styles.songName}>عيشالك</Text><Text style={styles.songArtist}>أمونة ♥ حمودي</Text><View style={styles.track}><View style={[styles.trackFill, { width: status.duration ? `${Math.min(100, (status.currentTime / status.duration) * 100)}%` : "0%" }]} /></View><Text style={styles.duration}>{formatTime(status.currentTime)} / {formatTime(status.duration)}</Text></View>
+            <Pressable onPress={toggleSong} style={({ pressed }) => [styles.play, isPlaying && styles.playActive, pressed && styles.pressed]}><Text style={styles.playIcon}>{isPlaying ? "Ⅱ" : "▶"}</Text></Pressable>
+          </View>
+          {isPlaying && <View style={styles.lyricStage}><Text style={styles.lyricText}>{lyric}</Text>{hearts.map((heart) => <FloatingHeart key={heart} />)}</View>}
         </View>
-        <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>أغنيتنا</Text><Text style={styles.sectionHint}>لحظتنا المفضلة</Text></View>
-        <View style={styles.musicCard}>
-          <View style={styles.musicDisc}><Text style={styles.discText}>♪</Text><Pulse active={isPlaying} /></View>
-          <View style={styles.musicMeta}><Text style={styles.musicTitle}>عيشالك</Text><Text style={styles.musicSubtitle}>{songReady ? "تعمل حتى نهاية الأغنية" : "أضيفي ملف الأغنية لتعمل كاملة"}</Text><View style={styles.progressTrack}><View style={[styles.progressFill, { width: status.duration ? `${Math.min(100, (status.currentTime / status.duration) * 100)}%` : "24%" }]} /></View><View style={styles.timeRow}><Text style={styles.time}>{formatTime(status.currentTime)}</Text><Text style={styles.time}>{status.duration ? formatTime(status.duration) : "—:—"}</Text></View></View>
-          <Pressable accessibilityRole="button" accessibilityLabel={isPlaying ? "إيقاف الأغنية" : "تشغيل الأغنية"} onPress={toggleMusic} style={({ pressed }) => [styles.playButton, isPlaying && styles.playingButton, pressed && styles.pressed]}><Text style={styles.playIcon}>{isPlaying ? "Ⅱ" : "▶"}</Text></Pressable>
-        </View>
-        <View style={styles.statsRow}><View style={styles.statCard}><Text style={styles.statValue}>{relationshipLabel}</Text><Text style={styles.statLabel}>من الحب</Text></View><View style={styles.statCard}><Text style={styles.statValue}>19.03.2024</Text><Text style={styles.statLabel}>منذ بدأ كل شيء</Text></View></View>
-        <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>فصولنا الصغيرة</Text><Text style={styles.sectionHint}>ذكريات تستحق أن تبقى</Text></View>
-        {memories.map((memory) => <Pressable key={memory.title} style={({ pressed }) => [styles.memoryCard, pressed && styles.pressed]}><View style={styles.memoryIcon}><Text style={styles.memoryEmoji}>{memory.emoji}</Text></View><View style={styles.memoryText}><Text style={styles.memoryTitle}>{memory.title}</Text><Text style={styles.memoryCopy}>{memory.text}</Text></View><Text style={styles.chevron}>‹</Text></Pressable>)}
-        <View style={styles.quoteCard}><Text style={styles.quoteMark}>“</Text><Text style={styles.quote}>أحبك لأنك تجعل الأيام العادية تبدو كأنها عيد.</Text><Text style={styles.quoteFrom}>— مذكّرة حب</Text></View>
-        <Pressable style={({ pressed }) => [styles.cta, pressed && styles.pressed]}><Text style={styles.ctaText}>افتح رسالة سرّية</Text><Text style={styles.ctaArrow}>←</Text></Pressable>
-        <Text style={styles.footer}>صُنع بحب، لشخص واحد فقط.</Text>
+        <View style={styles.loveStatement}><Text style={styles.statementQuote}>“</Text><Text style={styles.statement}>ثلاث سنوات، وما زلت أختارك في كل مرة.</Text><Text style={styles.statementDate}>19.03.2024 · إلى الأبد</Text></View>
+        <Pressable onPress={() => Linking.openURL(APK_URL)} style={({ pressed }) => [styles.apkButton, pressed && styles.pressed]}><Text style={styles.apkIcon}>↓</Text><View><Text style={styles.apkTitle}>تحميل التطبيق APK</Text><Text style={styles.apkSub}>خذه معك أينما ذهبت</Text></View></Pressable>
+        <Chat messages={messages} draft={draft} setDraft={setDraft} sendMessage={sendMessage} selectedMessage={selectedMessage} setSelectedMessage={setSelectedMessage} deleteMessage={deleteMessage} reactToMessage={reactToMessage} />
+        <Text style={styles.footer}>صُنع بحب من أمونة إلى حمودي</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function formatTime(seconds: number) {
-  if (!seconds) return "00:00";
-  const minutes = Math.floor(seconds / 60);
-  const remaining = Math.floor(seconds % 60).toString().padStart(2, "0");
-  return `${minutes}:${remaining}`;
+function GateScreen({ title, subtitle, value, setValue, button, onSubmit, error, answerMode = false }: { title: string; subtitle: string; value: string; setValue: (value: string) => void; button: string; onSubmit: () => void; error: string; answerMode?: boolean }) {
+  return <SafeAreaView style={styles.gate}><View style={styles.gateGlow} /><View style={styles.gateCard}><Text style={styles.gateSymbol}>{answerMode ? "✦" : "♡"}</Text><Text style={styles.gateTitle}>{title}</Text><Text style={styles.gateSubtitle}>{subtitle}</Text><TextInput autoFocus value={value} onChangeText={setValue} onSubmitEditing={onSubmit} secureTextEntry={!answerMode} keyboardType={answerMode ? "default" : "number-pad"} placeholder={answerMode ? "اكتب نعم" : "كلمة المرور"} placeholderTextColor="#A96D83" style={styles.gateInput} textAlign="center" /><Pressable onPress={onSubmit} style={({ pressed }) => [styles.gateButton, pressed && styles.pressed]}><Text style={styles.gateButtonText}>{button}</Text></Pressable>{Boolean(error) && <Text style={styles.error}>{error}</Text>}<Text style={styles.privateNote}>هذا المكان لنا فقط</Text></View></SafeAreaView>;
 }
 
+function ShadowScene({ active }: { active: boolean }) {
+  const hair = useRef(new Animated.Value(0)).current;
+  const kiss = useRef(new Animated.Value(0)).current;
+  const approach = useRef(new Animated.Value(0)).current;
+  const dance = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const hairLoop = Animated.loop(Animated.sequence([Animated.timing(hair, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }), Animated.timing(hair, { toValue: 0, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true })]));
+    hairLoop.start();
+    return () => hairLoop.stop();
+  }, [hair]);
+  useEffect(() => {
+    if (!active) { kiss.stopAnimation(); kiss.setValue(0); return; }
+    const loop = Animated.loop(Animated.sequence([Animated.timing(kiss, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }), Animated.delay(800), Animated.timing(kiss, { toValue: 0, duration: 0, useNativeDriver: true })]));
+    loop.start();
+    return () => loop.stop();
+  }, [active, kiss]);
+  useEffect(() => {
+    if (!active) { approach.stopAnimation(); dance.stopAnimation(); approach.setValue(0); dance.setValue(0); return; }
+    const approachThenDance = Animated.sequence([
+      Animated.timing(approach, { toValue: 1, duration: 3600, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }),
+      Animated.loop(Animated.sequence([
+        Animated.timing(dance, { toValue: 1, duration: 430, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(dance, { toValue: -1, duration: 430, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(dance, { toValue: 0, duration: 430, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])),
+    ]);
+    approachThenDance.start();
+    return () => approachThenDance.stop();
+  }, [active, approach, dance]);
+  const danceTilt = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: ["-5deg", "0deg", "5deg"] });
+  const danceLift = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: [2, 0, -2] });
+  return <View style={styles.scene}><View style={styles.moon} /><Animated.View style={[styles.girl, { transform: [{ translateY: danceLift }, { rotate: danceTilt }] }]}><View style={styles.girlHead} /><Animated.View style={[styles.hair, { transform: [{ rotate: hair.interpolate({ inputRange: [0, 1], outputRange: ["-8deg", "8deg"] }) }] }]} /><View style={styles.girlBody} /><View style={styles.girlDress} /></Animated.View><Animated.View style={[styles.man, { transform: [{ translateX: approach.interpolate({ inputRange: [0, 1], outputRange: [0, -67] }) }, { translateY: danceLift }, { rotate: danceTilt }] }]}><View style={styles.manHead} /><View style={styles.manBody} /></Animated.View><Animated.Text style={[styles.kiss, { opacity: kiss.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateX: kiss.interpolate({ inputRange: [0, 1], outputRange: [-18, 118] }) }, { translateY: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [16, -20, 6] }) }, { scale: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1.15, 0.8] }) }] }]}>♥</Animated.Text><Text style={styles.sceneCaption}>{active ? "يقترب حمودي… ثم نرقص حتى آخر نغمة" : "اضغط تشغيل… ودع الحب يتحرك"}</Text></View>;
+}
+
+function AmbientSnow({ active }: { active: boolean }) {
+  if (!active) return null;
+  return <View pointerEvents="none" style={StyleSheet.absoluteFill}>{Array.from({ length: 22 }, (_, index) => <Snow key={index} index={index} />)}</View>;
+}
+
+function Snow({ index }: { index: number }) {
+  const fall = useRef(new Animated.Value(-30)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([Animated.delay(index * 180), Animated.timing(fall, { toValue: 900, duration: 6800 + index * 210, easing: Easing.linear, useNativeDriver: true }), Animated.timing(fall, { toValue: -30, duration: 0, useNativeDriver: true })]));
+    loop.start();
+    return () => loop.stop();
+  }, [fall, index]);
+  return <Animated.Text style={[styles.snow, { left: 8 + ((index * 37) % 370), opacity: 0.28 + (index % 4) * 0.12, transform: [{ translateY: fall }] }]}>❄</Animated.Text>;
+}
+
+function FloatingHeart() {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(progress, { toValue: 1, duration: 1700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(); }, [progress]);
+  return <Animated.Text style={[styles.floatingHeart, { opacity: progress.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 0] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [15, -90] }) }, { translateX: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -16, 12] }) }] }]}>♥</Animated.Text>;
+}
+
+function Chat({ messages, draft, setDraft, sendMessage, selectedMessage, setSelectedMessage, deleteMessage, reactToMessage }: { messages: ChatMessage[]; draft: string; setDraft: (value: string) => void; sendMessage: () => void; selectedMessage: string | null; setSelectedMessage: (id: string | null) => void; deleteMessage: (id: string) => void; reactToMessage: (id: string, reaction: string) => void }) {
+  return <View style={styles.chat}><View style={styles.sectionLine}><Text style={styles.sectionTitle}>شاتنا</Text><Text style={styles.sectionNote}>رسائل تبقى دائمًا</Text></View><View style={styles.chatBox}>{messages.map((message) => <View key={message.id} style={[styles.messageRow, message.author === "أمونة" ? styles.myRow : styles.hisRow]}><Pressable onLongPress={() => setSelectedMessage(selectedMessage === message.id ? null : message.id)} style={[styles.messageBubble, message.author === "أمونة" ? styles.myBubble : styles.hisBubble]}><Text style={styles.messageAuthor}>{message.author}</Text><Text style={styles.messageText}>{message.text}</Text><Text style={styles.messageTime}>{message.time}</Text>{message.reaction && <Text style={styles.reaction}>{message.reaction}</Text>}</Pressable>{selectedMessage === message.id && <View style={styles.messageActions}><View style={styles.reactions}>{reactions.map((reaction) => <Pressable key={reaction} onPress={() => reactToMessage(message.id, reaction)} style={styles.reactionButton}><Text>{reaction}</Text></Pressable>)}</View><Pressable onPress={() => deleteMessage(message.id)}><Text style={styles.deleteText}>حذف الرسالة</Text></Pressable></View>}</View>)}</View><KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.chatComposer}><TextInput value={draft} onChangeText={setDraft} onSubmitEditing={sendMessage} placeholder="اكتب رسالة لحمودي…" placeholderTextColor="#A96D83" style={styles.chatInput} textAlign="right" /><Pressable onPress={sendMessage} style={styles.send}><Text style={styles.sendText}>إرسال</Text></Pressable></KeyboardAvoidingView><Text style={styles.chatHint}>اضغط مطولًا على الرسالة للحذف أو التفاعل</Text></View>;
+}
+
+function formatTime(seconds: number) { if (!seconds) return "00:00"; const minutes = Math.floor(seconds / 60); const rest = Math.floor(seconds % 60).toString().padStart(2, "0"); return `${minutes}:${rest}`; }
+
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: WINE_DEEP, alignItems: "center", overflow: "hidden" },
-  scroll: { paddingTop: 18, paddingBottom: 42, zIndex: 2 },
-  snowLayer: { flex: 1, overflow: "hidden" },
-  snowflake: { position: "absolute", top: -20, color: "rgba(255,247,250,0.95)", textShadowColor: "rgba(255,255,255,0.65)", textShadowRadius: 8 },
-  notesLayer: { position: "absolute", zIndex: 3, top: 435, right: 42, width: 180, height: 90 },
-  floatingNote: { position: "absolute", color: "#FFD6E0", fontSize: 25, fontWeight: "800", textShadowColor: "rgba(217,76,104,0.8)", textShadowRadius: 8 },
-  pulseRing: { position: "absolute", width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: "rgba(255,179,193,0.65)", backgroundColor: "transparent" },
-  topRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 22 },
-  eyebrow: { color: MUTED, fontSize: 12, textAlign: "right", letterSpacing: 0.3 },
-  brand: { color: "#FFF3F5", fontSize: 28, fontWeight: "800", marginTop: 3, textAlign: "right" },
-  heartButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: GLASS, borderWidth: 1, borderColor: BORDER, alignItems: "center", justifyContent: "center" },
-  heart: { color: "#FFB3C1", fontSize: 25 },
-  heroGlow: { position: "absolute", top: 72, right: -100, width: 260, height: 260, borderRadius: 130, backgroundColor: "rgba(217,76,104,0.18)" },
-  heroCard: { backgroundColor: "rgba(125,23,51,0.72)", borderWidth: 1, borderColor: "rgba(255,194,208,0.25)", borderRadius: 30, padding: 24, minHeight: 250, justifyContent: "space-between", overflow: "hidden" },
-  heroKicker: { color: GOLD, fontSize: 13, fontWeight: "700", textAlign: "right" },
-  heroTitle: { color: "#FFF7F8", fontSize: 31, lineHeight: 40, fontWeight: "800", textAlign: "right", marginTop: 18 },
-  heroCopy: { color: "#F1CDD6", fontSize: 14, lineHeight: 24, textAlign: "right", marginTop: 12 },
-  signatureRow: { flexDirection: "row-reverse", alignItems: "center", marginTop: 20, gap: 10 },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(242,197,138,0.18)", borderWidth: 1, borderColor: "rgba(242,197,138,0.5)", justifyContent: "center", alignItems: "center" },
-  avatarText: { color: GOLD, fontSize: 16 },
-  signature: { color: "#F4DCE2", fontSize: 13 },
-  sectionHeading: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "baseline", marginTop: 28, marginBottom: 12 },
-  sectionTitle: { color: "#FFF2F4", fontSize: 19, fontWeight: "800", textAlign: "right" },
-  sectionHint: { color: MUTED, fontSize: 11, textAlign: "left" },
-  musicCard: { flexDirection: "row-reverse", alignItems: "center", backgroundColor: GLASS, borderWidth: 1, borderColor: BORDER, borderRadius: 24, padding: 16, gap: 13 },
-  musicDisc: { width: 62, height: 62, borderRadius: 31, backgroundColor: WINE, borderWidth: 5, borderColor: "rgba(242,197,138,0.28)", justifyContent: "center", alignItems: "center" },
-  discText: { color: GOLD, fontSize: 27 },
-  musicMeta: { flex: 1 },
-  musicTitle: { color: "#FFF5F6", fontSize: 17, fontWeight: "800", textAlign: "right" },
-  musicSubtitle: { color: MUTED, fontSize: 11, textAlign: "right", marginTop: 3 },
-  progressTrack: { height: 4, backgroundColor: "rgba(255,255,255,0.16)", borderRadius: 3, marginTop: 12, overflow: "hidden" },
-  progressFill: { height: 4, backgroundColor: BLUSH, borderRadius: 3 },
-  timeRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
-  time: { color: "#B98B98", fontSize: 9 },
-  playButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: BLUSH, alignItems: "center", justifyContent: "center", shadowColor: BLUSH, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5 },
-  playingButton: { backgroundColor: "#F18AA0" },
-  playIcon: { color: "#FFF7F8", fontSize: 18, fontWeight: "800" },
-  statsRow: { flexDirection: "row-reverse", gap: 12, marginTop: 12 },
-  statCard: { flex: 1, backgroundColor: "rgba(255,255,255,0.07)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderRadius: 20, paddingVertical: 14, alignItems: "center" },
-  statValue: { color: GOLD, fontSize: 23, fontWeight: "800" },
-  statLabel: { color: MUTED, fontSize: 11, marginTop: 3 },
-  memoryCard: { flexDirection: "row-reverse", alignItems: "center", backgroundColor: "rgba(255,255,255,0.075)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderRadius: 20, padding: 13, marginBottom: 9 },
-  memoryIcon: { width: 42, height: 42, borderRadius: 14, backgroundColor: "rgba(217,76,104,0.2)", justifyContent: "center", alignItems: "center" },
-  memoryEmoji: { color: "#FFB3C1", fontSize: 20 },
-  memoryText: { flex: 1, marginHorizontal: 12 },
-  memoryTitle: { color: "#FFF2F4", fontSize: 14, fontWeight: "700", textAlign: "right" },
-  memoryCopy: { color: MUTED, fontSize: 11, textAlign: "right", marginTop: 4 },
-  chevron: { color: "#D8899C", fontSize: 24 },
-  quoteCard: { backgroundColor: "rgba(242,197,138,0.10)", borderWidth: 1, borderColor: "rgba(242,197,138,0.22)", borderRadius: 24, padding: 21, marginTop: 18 },
-  quoteMark: { color: GOLD, fontSize: 40, height: 32, textAlign: "right" },
-  quote: { color: "#FFF1DD", fontSize: 16, lineHeight: 27, textAlign: "right", marginTop: 4 },
-  quoteFrom: { color: "#D7B98E", fontSize: 11, textAlign: "right", marginTop: 12 },
-  cta: { flexDirection: "row-reverse", justifyContent: "center", alignItems: "center", gap: 10, backgroundColor: "#FFF1DD", borderRadius: 18, paddingVertical: 15, marginTop: 18 },
-  ctaText: { color: WINE_DEEP, fontSize: 14, fontWeight: "800" },
-  ctaArrow: { color: WINE, fontSize: 20 },
-  footer: { color: "#9E6473", fontSize: 11, textAlign: "center", marginTop: 18 },
+  safe: { flex: 1, backgroundColor: BG, alignItems: "center", overflow: "hidden" },
+  page: { paddingTop: 18, paddingBottom: 44, zIndex: 2 },
+  nav: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
+  navOverline: { color: "#A96D83", fontSize: 11, textAlign: "right" },
+  logo: { color: "#FFF3F6", fontSize: 22, fontWeight: "800", textAlign: "right", marginTop: 3 },
+  lock: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, borderColor: BORDER, backgroundColor: GLASS, alignItems: "center", justifyContent: "center" },
+  hero: { minHeight: 450, backgroundColor: "rgba(82,12,39,0.72)", borderRadius: 32, borderWidth: 1, borderColor: "rgba(255,182,207,0.25)", padding: 22, overflow: "hidden" },
+  heroOverline: { color: GOLD, fontSize: 13, fontWeight: "700", textAlign: "right" },
+  heroTitle: { color: "#FFF6F8", fontSize: 30, lineHeight: 39, fontWeight: "800", textAlign: "right", marginTop: 18 },
+  heroText: { color: SOFT, fontSize: 13, lineHeight: 23, textAlign: "right", marginTop: 10 },
+  scene: { height: 260, marginTop: 9, position: "relative", alignItems: "center", justifyContent: "flex-end" },
+  moon: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(201,70,112,0.18)", top: 18, left: 52 },
+  girl: { position: "absolute", left: 60, bottom: 14, width: 100, height: 220, alignItems: "center" },
+  girlHead: { width: 43, height: 49, borderRadius: 24, backgroundColor: "#150811", marginLeft: 16, zIndex: 2 },
+  hair: { position: "absolute", top: 4, left: 25, width: 68, height: 82, borderRadius: 40, backgroundColor: "#090409", transform: [{ rotate: "-8deg" }] },
+  girlBody: { position: "absolute", top: 64, width: 34, height: 86, borderRadius: 17, backgroundColor: "#0A0509" },
+  girlDress: { position: "absolute", bottom: 0, width: 100, height: 125, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderBottomLeftRadius: 15, borderBottomRightRadius: 15, backgroundColor: "#080309" },
+  man: { position: "absolute", right: 42, bottom: 14, width: 105, height: 215, alignItems: "center" },
+  manHead: { width: 49, height: 54, borderRadius: 26, backgroundColor: "#080309", marginRight: 4, zIndex: 2 },
+  manBody: { position: "absolute", top: 65, width: 82, height: 150, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: "#070207" },
+  kiss: { position: "absolute", bottom: 145, left: 137, color: "#FFB6CC", fontSize: 29, textShadowColor: "#F36A91", textShadowRadius: 12 },
+  sceneCaption: { color: "#A96D83", fontSize: 11, marginBottom: -4 },
+  songSection: { marginTop: 26 },
+  sectionLine: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "baseline", marginBottom: 11 },
+  sectionTitle: { color: "#FFF1F5", fontSize: 20, fontWeight: "800", textAlign: "right" },
+  sectionNote: { color: "#A96D83", fontSize: 11 },
+  songCard: { flexDirection: "row-reverse", alignItems: "center", gap: 13, padding: 15, borderRadius: 25, backgroundColor: GLASS, borderWidth: 1, borderColor: BORDER },
+  vinyl: { width: 66, height: 66, borderRadius: 33, backgroundColor: "#17070F", borderWidth: 6, borderColor: "#8C2349", alignItems: "center", justifyContent: "center" },
+  vinylCenter: { width: 27, height: 27, borderRadius: 14, backgroundColor: RUBY, alignItems: "center", justifyContent: "center" },
+  vinylNote: { color: GOLD, fontSize: 17 },
+  songMeta: { flex: 1 },
+  songName: { color: "#FFF5F7", fontSize: 17, fontWeight: "800", textAlign: "right" },
+  songArtist: { color: SOFT, fontSize: 11, textAlign: "right", marginTop: 2 },
+  track: { height: 4, backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 3, marginTop: 10, overflow: "hidden" },
+  trackFill: { height: 4, backgroundColor: PINK, borderRadius: 3 },
+  duration: { color: "#A96D83", fontSize: 9, textAlign: "left", marginTop: 4 },
+  play: { width: 49, height: 49, borderRadius: 25, backgroundColor: PINK, alignItems: "center", justifyContent: "center", shadowColor: PINK, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  playActive: { backgroundColor: "#FF9CB7" },
+  playIcon: { color: "#FFF", fontSize: 18, fontWeight: "800" },
+  lyricStage: { height: 105, alignItems: "center", justifyContent: "center", marginTop: 4, overflow: "hidden" },
+  lyricText: { color: "#FFB8CB", fontSize: 25, fontWeight: "900", textShadowColor: "#F36A91", textShadowRadius: 10 },
+  floatingHeart: { position: "absolute", color: "#B82D5B", fontSize: 22, right: 75, bottom: 5, textShadowColor: "#F36A91", textShadowRadius: 9 },
+  loveStatement: { backgroundColor: "rgba(245,209,155,0.08)", borderWidth: 1, borderColor: "rgba(245,209,155,0.2)", borderRadius: 25, padding: 20, marginTop: 17 },
+  statementQuote: { color: GOLD, fontSize: 38, height: 31, textAlign: "right" },
+  statement: { color: "#FFF2E0", fontSize: 17, lineHeight: 28, fontWeight: "700", textAlign: "right" },
+  statementDate: { color: "#C8A57B", fontSize: 11, textAlign: "right", marginTop: 10 },
+  apkButton: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 12, backgroundColor: "#FFF0DB", borderRadius: 19, paddingVertical: 14, marginTop: 17 },
+  apkIcon: { color: BG, fontSize: 25, fontWeight: "800" },
+  apkTitle: { color: BG, fontWeight: "800", fontSize: 14, textAlign: "right" },
+  apkSub: { color: "#794052", fontSize: 10, textAlign: "right", marginTop: 2 },
+  chat: { marginTop: 30 },
+  chatBox: { backgroundColor: "rgba(255,255,255,0.045)", borderRadius: 25, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", padding: 13, minHeight: 150 },
+  messageRow: { marginBottom: 10, maxWidth: "88%" },
+  myRow: { alignSelf: "flex-end", alignItems: "flex-end" },
+  hisRow: { alignSelf: "flex-start", alignItems: "flex-start" },
+  messageBubble: { padding: 11, borderRadius: 17, minWidth: 130 },
+  myBubble: { backgroundColor: "rgba(165,31,73,0.78)", borderBottomRightRadius: 4 },
+  hisBubble: { backgroundColor: "rgba(255,255,255,0.10)", borderBottomLeftRadius: 4 },
+  messageAuthor: { color: GOLD, fontSize: 10, fontWeight: "700", textAlign: "right" },
+  messageText: { color: "#FFF0F4", fontSize: 13, lineHeight: 21, textAlign: "right", marginTop: 3 },
+  messageTime: { color: "#C98DA0", fontSize: 9, textAlign: "left", marginTop: 5 },
+  reaction: { position: "absolute", bottom: -10, left: 8, fontSize: 18 },
+  messageActions: { alignItems: "flex-end", marginTop: 7 },
+  reactions: { flexDirection: "row", gap: 4, marginBottom: 5 },
+  reactionButton: { backgroundColor: "rgba(255,255,255,0.11)", borderRadius: 14, paddingHorizontal: 6, paddingVertical: 3 },
+  deleteText: { color: "#F889A0", fontSize: 11 },
+  chatComposer: { flexDirection: "row-reverse", alignItems: "center", gap: 8, marginTop: 10 },
+  chatInput: { flex: 1, color: "#FFF1F5", backgroundColor: GLASS, borderWidth: 1, borderColor: BORDER, borderRadius: 17, paddingHorizontal: 13, paddingVertical: 11, fontSize: 13 },
+  send: { backgroundColor: RUBY, borderRadius: 17, paddingHorizontal: 15, paddingVertical: 12 },
+  sendText: { color: "#FFF", fontWeight: "700", fontSize: 12 },
+  chatHint: { color: "#8F5368", fontSize: 10, textAlign: "right", marginTop: 8 },
+  footer: { color: "#8F5368", fontSize: 11, textAlign: "center", marginTop: 23 },
+  snow: { position: "absolute", top: -20, color: "#FFF", fontSize: 12, textShadowColor: "#FFF", textShadowRadius: 7 },
   pressed: { opacity: 0.75, transform: [{ scale: 0.98 }] },
+  gate: { flex: 1, backgroundColor: BG, alignItems: "center", justifyContent: "center", padding: 24, overflow: "hidden" },
+  gateGlow: { position: "absolute", width: 330, height: 330, borderRadius: 165, backgroundColor: "rgba(165,31,73,0.17)", top: "18%" },
+  gateCard: { width: "100%", maxWidth: 440, padding: 28, borderRadius: 32, backgroundColor: "rgba(93,15,45,0.58)", borderWidth: 1, borderColor: "rgba(255,183,207,0.26)", alignItems: "center" },
+  gateSymbol: { color: PINK, fontSize: 42, marginBottom: 10 },
+  gateTitle: { color: "#FFF4F7", fontSize: 28, fontWeight: "800", textAlign: "center" },
+  gateSubtitle: { color: SOFT, fontSize: 14, textAlign: "center", marginTop: 10, lineHeight: 23 },
+  gateInput: { width: "100%", color: "#FFF", backgroundColor: "rgba(0,0,0,0.18)", borderWidth: 1, borderColor: "rgba(255,183,207,0.22)", borderRadius: 17, paddingVertical: 14, paddingHorizontal: 14, marginTop: 25, fontSize: 18 },
+  gateButton: { width: "100%", backgroundColor: PINK, borderRadius: 17, paddingVertical: 14, alignItems: "center", marginTop: 12 },
+  gateButtonText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
+  error: { color: "#FF9EB5", fontSize: 12, marginTop: 12, textAlign: "center" },
+  privateNote: { color: "#8F5368", fontSize: 11, marginTop: 25 },
 });
