@@ -191,7 +191,7 @@ function ShadowScene({ active }: { active: boolean }) {
   }, [active, approach, dance]);
   const danceTilt = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: ["-5deg", "0deg", "5deg"] });
   const danceLift = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: [2, 0, -2] });
-  return <View style={styles.scene}><View style={styles.moon} /><Animated.View style={[styles.girl, { transform: [{ translateY: danceLift }, { rotate: danceTilt }] }]}><View style={styles.girlHead} /><Animated.View style={[styles.hair, { transform: [{ rotate: hair.interpolate({ inputRange: [0, 1], outputRange: ["-8deg", "8deg"] }) }] }]} /><View style={styles.girlBody} /><View style={styles.girlDress} /></Animated.View><Animated.View style={[styles.man, { transform: [{ translateX: approach.interpolate({ inputRange: [0, 1], outputRange: [0, -67] }) }, { translateY: danceLift }, { rotate: danceTilt }] }]}><View style={styles.manHead} /><View style={styles.manBody} /></Animated.View><Animated.Text style={[styles.kiss, { opacity: kiss.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateX: kiss.interpolate({ inputRange: [0, 1], outputRange: [-18, 118] }) }, { translateY: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [16, -20, 6] }) }, { scale: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1.15, 0.8] }) }] }]}>♥</Animated.Text><Text style={styles.sceneCaption}>{active ? "يقترب حمودي… ثم نرقص حتى آخر نغمة" : "اضغط تشغيل… ودع الحب يتحرك"}</Text></View>;
+  return <View style={styles.scene}><View style={styles.moon} /><Animated.View style={[styles.girl, { transform: [{ translateY: danceLift }, { rotate: danceTilt }] }]}><Text style={styles.princessCrown}>♕</Text><View style={styles.girlHead} /><Animated.View style={[styles.hair, { transform: [{ rotate: hair.interpolate({ inputRange: [0, 1], outputRange: ["-8deg", "8deg"] }) }] }]} /><View style={styles.girlBody} /><View style={styles.girlDress}><View style={styles.dressRibbon} /></View></Animated.View><Animated.View style={[styles.man, { transform: [{ translateX: approach.interpolate({ inputRange: [0, 1], outputRange: [0, -54] }) }, { translateY: danceLift }, { rotate: danceTilt }] }]}><Text style={styles.princeCrown}>♔</Text><View style={styles.manHead} /><View style={styles.manBody}><View style={styles.princeCoat} /></View></Animated.View><Animated.Text style={[styles.kiss, { opacity: kiss.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateX: kiss.interpolate({ inputRange: [0, 1], outputRange: [-18, 118] }) }, { translateY: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [16, -20, 6] }) }, { scale: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1.15, 0.8] }) }] }]}>♥</Animated.Text><Text style={styles.sceneCaption}>{active ? "يقترب الأمير… ثم ترقص الأميرة حتى آخر نغمة" : "اضغط تشغيل… ودع الحكاية تتحرك"}</Text></View>;
 }
 
 function AmbientSnow({ active }: { active: boolean }) {
@@ -232,16 +232,20 @@ const styles = StyleSheet.create({
   heroOverline: { color: GOLD, fontSize: 13, fontWeight: "700", textAlign: "right" },
   heroTitle: { color: "#FFF6F8", fontSize: 30, lineHeight: 39, fontWeight: "800", textAlign: "right", marginTop: 18 },
   heroText: { color: SOFT, fontSize: 13, lineHeight: 23, textAlign: "right", marginTop: 10 },
-  scene: { height: 260, marginTop: 9, position: "relative", alignItems: "center", justifyContent: "flex-end" },
-  moon: { position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(201,70,112,0.18)", top: 18, left: 52 },
-  girl: { position: "absolute", left: 60, bottom: 14, width: 100, height: 220, alignItems: "center" },
-  girlHead: { width: 43, height: 49, borderRadius: 24, backgroundColor: "#150811", marginLeft: 16, zIndex: 2 },
-  hair: { position: "absolute", top: 4, left: 25, width: 68, height: 82, borderRadius: 40, backgroundColor: "#090409", transform: [{ rotate: "-8deg" }] },
-  girlBody: { position: "absolute", top: 64, width: 34, height: 86, borderRadius: 17, backgroundColor: "#0A0509" },
-  girlDress: { position: "absolute", bottom: 0, width: 100, height: 125, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderBottomLeftRadius: 15, borderBottomRightRadius: 15, backgroundColor: "#080309" },
-  man: { position: "absolute", right: 42, bottom: 14, width: 105, height: 215, alignItems: "center" },
-  manHead: { width: 49, height: 54, borderRadius: 26, backgroundColor: "#080309", marginRight: 4, zIndex: 2 },
-  manBody: { position: "absolute", top: 65, width: 82, height: 150, borderTopLeftRadius: 30, borderTopRightRadius: 30, backgroundColor: "#070207" },
+  scene: { height: 235, marginTop: 9, position: "relative", alignItems: "center", justifyContent: "flex-end" },
+  moon: { position: "absolute", width: 155, height: 155, borderRadius: 78, backgroundColor: "rgba(201,70,112,0.18)", top: 18, left: 65 },
+  girl: { position: "absolute", left: 92, bottom: 12, width: 72, height: 164, alignItems: "center" },
+  princessCrown: { color: "#170711", fontSize: 20, position: "absolute", top: -12, zIndex: 4 },
+  girlHead: { width: 30, height: 35, borderRadius: 18, backgroundColor: "#150811", marginLeft: 10, zIndex: 2 },
+  hair: { position: "absolute", top: 2, left: 19, width: 50, height: 60, borderRadius: 32, backgroundColor: "#090409", transform: [{ rotate: "-8deg" }] },
+  girlBody: { position: "absolute", top: 47, width: 24, height: 55, borderRadius: 13, backgroundColor: "#0A0509" },
+  girlDress: { position: "absolute", bottom: 0, width: 72, height: 90, borderTopLeftRadius: 27, borderTopRightRadius: 27, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, backgroundColor: "#080309", alignItems: "center" },
+  dressRibbon: { width: 39, height: 5, borderRadius: 3, backgroundColor: "#1B0712", marginTop: 27 },
+  man: { position: "absolute", right: 68, bottom: 12, width: 70, height: 162, alignItems: "center" },
+  princeCrown: { color: "#170711", fontSize: 19, position: "absolute", top: -13, zIndex: 4 },
+  manHead: { width: 34, height: 38, borderRadius: 20, backgroundColor: "#080309", marginRight: 3, zIndex: 2 },
+  manBody: { position: "absolute", top: 48, width: 57, height: 114, borderTopLeftRadius: 22, borderTopRightRadius: 22, backgroundColor: "#070207", alignItems: "center" },
+  princeCoat: { width: 4, height: 88, backgroundColor: "#180712", marginTop: 14 },
   kiss: { position: "absolute", bottom: 145, left: 137, color: "#FFB6CC", fontSize: 29, textShadowColor: "#F36A91", textShadowRadius: 12 },
   sceneCaption: { color: "#A96D83", fontSize: 11, marginBottom: -4 },
   songSection: { marginTop: 26 },
