@@ -121,7 +121,7 @@ export default function HomeScreen() {
       <MusicNotes active={isPlaying} />
       <ScrollView contentContainerStyle={[styles.scroll, { width: contentWidth }]} showsVerticalScrollIndicator={false}>
         <View style={styles.topRow}>
-          <View><Text style={styles.eyebrow}>إلى الشخص الذي أحبّه</Text><Text style={styles.brand}>My Love</Text></View>
+          <View><Text style={styles.eyebrow}>إلى حمودي، حبيبي</Text><Text style={styles.brand}>My Love</Text></View>
           <Pressable accessibilityRole="button" accessibilityLabel="تفضيل التطبيق" onPress={() => setLiked((value) => !value)} style={({ pressed }) => [styles.heartButton, pressed && styles.pressed]}><Text style={styles.heart}>{liked ? "♥" : "♡"}</Text></Pressable>
         </View>
         <View style={styles.heroGlow} />
@@ -129,7 +129,7 @@ export default function HomeScreen() {
           <Text style={styles.heroKicker}>رسالة اليوم</Text>
           <Text style={styles.heroTitle}>أنت أجمل صدفة{`\n`}صارت لي قدرًا.</Text>
           <Text style={styles.heroCopy}>هذا المكان صغير، لكنه يحمل لك كل الأشياء التي لا تكفيها رسالة واحدة.</Text>
-          <View style={styles.signatureRow}><View style={styles.avatar}><Text style={styles.avatarText}>♥</Text></View><Text style={styles.signature}>من قلبي إلى قلبك</Text></View>
+          <View style={styles.signatureRow}><View style={styles.avatar}><Text style={styles.avatarText}>♥</Text></View><Text style={styles.signature}>من أمونة إلى حمودي</Text></View>
         </View>
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>أغنيتنا</Text><Text style={styles.sectionHint}>لحظتنا المفضلة</Text></View>
         <View style={styles.musicCard}>
@@ -141,7 +141,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeading}><Text style={styles.sectionTitle}>فصولنا الصغيرة</Text><Text style={styles.sectionHint}>ذكريات تستحق أن تبقى</Text></View>
         {memories.map((memory) => <Pressable key={memory.title} style={({ pressed }) => [styles.memoryCard, pressed && styles.pressed]}><View style={styles.memoryIcon}><Text style={styles.memoryEmoji}>{memory.emoji}</Text></View><View style={styles.memoryText}><Text style={styles.memoryTitle}>{memory.title}</Text><Text style={styles.memoryCopy}>{memory.text}</Text></View><Text style={styles.chevron}>‹</Text></Pressable>)}
         <View style={styles.quoteCard}><Text style={styles.quoteMark}>“</Text><Text style={styles.quote}>أحبك لأنك تجعل الأيام العادية تبدو كأنها عيد.</Text><Text style={styles.quoteFrom}>— مذكّرة حب</Text></View>
-        <Pressable style={({ pressed }) => [styles.cta, pressed && styles.pressed]}><Text style={styles.ctaText}>افتحي رسالة سرّية</Text><Text style={styles.ctaArrow}>←</Text></Pressable>
+        <Pressable style={({ pressed }) => [styles.cta, pressed && styles.pressed]}><Text style={styles.ctaText}>افتح رسالة سرّية</Text><Text style={styles.ctaArrow}>←</Text></Pressable>
         <Text style={styles.footer}>صُنع بحب، لشخص واحد فقط.</Text>
       </ScrollView>
     </SafeAreaView>
