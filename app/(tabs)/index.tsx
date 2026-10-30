@@ -20,8 +20,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const SONG = require("../../assets/audio/aishalak.mp3");
-const PRINCESS = require("../../assets/princess-silhouette.png");
-const PRINCE = require("../../assets/prince-silhouette.png");
 const NIGHT_LAKE = require("../../assets/night-lake-background.jpg");
 const PASSWORD = "1932024";
 const APK_URL = "https://github.com/immasan16-prog/My-location-/releases/latest/download/MyLove.apk";
@@ -130,7 +128,7 @@ export default function HomeScreen() {
           <Text style={styles.heroOverline}>من أمونة إلى حمودي</Text>
           <Text style={styles.heroTitle}>بعض الحب لا يُحكى…{`\n`}بل يُعاش.</Text>
           <Text style={styles.heroText}>كل ما في هذا المكان يشبهنا: هادئ، عميق، ولا يراه أحد سوانا.</Text>
-          <ShadowScene active={isPlaying} />
+          <RomanticScene active={isPlaying} />
         </View>
         <View style={styles.songSection}>
           <View style={styles.sectionLine}><Text style={styles.sectionTitle}>عيشالك</Text><Text style={styles.sectionNote}>أغنيتنا إلى النهاية</Text></View>
@@ -154,17 +152,22 @@ function GateScreen({ title, subtitle, value, setValue, button, onSubmit, error,
   return <SafeAreaView style={styles.gate}><View style={styles.gateGlow} /><View style={styles.gateCard}><Text style={styles.gateSymbol}>{answerMode ? "✦" : "♡"}</Text><Text style={styles.gateTitle}>{title}</Text><Text style={styles.gateSubtitle}>{subtitle}</Text><TextInput autoFocus value={value} onChangeText={setValue} onSubmitEditing={onSubmit} secureTextEntry={!answerMode} keyboardType={answerMode ? "default" : "number-pad"} placeholder={answerMode ? "اكتب نعم" : "كلمة المرور"} placeholderTextColor="#A96D83" style={styles.gateInput} textAlign="center" /><Pressable onPress={onSubmit} style={({ pressed }) => [styles.gateButton, pressed && styles.pressed]}><Text style={styles.gateButtonText}>{button}</Text></Pressable>{Boolean(error) && <Text style={styles.error}>{error}</Text>}<Text style={styles.privateNote}>هذا المكان لنا فقط</Text></View></SafeAreaView>;
 }
 
-function ShadowScene({ active }: { active: boolean }) {
-  const approach = useRef(new Animated.Value(0)).current;
+function RomanticScene({ active }: { active: boolean }) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  const orbit = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!active) { approach.stopAnimation(); approach.setValue(0); return; }
-    const movement = Animated.timing(approach, { toValue: 1, duration: 1900, easing: Easing.inOut(Easing.cubic), useNativeDriver: true });
-    movement.start();
-    return () => movement.stop();
-  }, [active, approach]);
-  const princessX = approach.interpolate({ inputRange: [0, 1], outputRange: [0, 27] });
-  const princeX = approach.interpolate({ inputRange: [0, 1], outputRange: [0, -27] });
-  return <View style={styles.scene}><View style={styles.moon} /><MagicSparkles active={active} /><Animated.Image source={PRINCESS} resizeMode="contain" style={[styles.princessFigure, { transform: [{ translateX: princessX }] }]} /><Animated.Image source={PRINCE} resizeMode="contain" style={[styles.princeFigure, { transform: [{ translateX: princeX }] }]} /><Text style={styles.sceneCaption}>{active ? "يقتربان بهدوء…" : "اضغط تشغيل… ليقتربا من بعضهما"}</Text></View>;
+    const pulseLoop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: active ? 720 : 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: active ? 720 : 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    const orbitLoop = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: active ? 9000 : 15000, easing: Easing.linear, useNativeDriver: true }));
+    pulseLoop.start();
+    orbitLoop.start();
+    return () => { pulseLoop.stop(); orbitLoop.stop(); };
+  }, [active, orbit, pulse]);
+  const heartScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.08] });
+  const ringRotate = orbit.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+  return <View style={styles.scene}><View style={styles.moon} /><MagicSparkles active={active} /><Animated.View style={[styles.orbit, { transform: [{ rotate: ringRotate }] }]}><View style={styles.orbitDot} /><View style={styles.orbitDotTwo} /></Animated.View><Animated.View style={[styles.orbGlow, { transform: [{ scale: heartScale }] }]} /><Animated.View style={[styles.orb, { transform: [{ scale: heartScale }] }]}><Text style={styles.orbHeart}>♥</Text><View style={styles.orbLine} /><View style={styles.orbNames}><Text style={styles.orbName}>أمونة</Text><Text style={styles.orbAmp}>×</Text><Text style={styles.orbName}>حمودي</Text></View></Animated.View><Text style={styles.sceneCaption}>{active ? "قلبي يضيء مع كل نبضة" : "اضغط تشغيل… ليضيء حبنا"}</Text></View>;
 }
 
 function MagicSparkles({ active }: { active: boolean }) {
@@ -214,6 +217,16 @@ const styles = StyleSheet.create({
   moon: { position: "absolute", width: 155, height: 155, borderRadius: 78, backgroundColor: "rgba(201,70,112,0.18)", top: 18, left: 65 },
   princessFigure: { position: "absolute", width: 112, height: 205, bottom: 11, left: 82 },
   princeFigure: { position: "absolute", width: 112, height: 205, bottom: 11, right: 78 },
+  orbit: { position: "absolute", width: 230, height: 104, borderRadius: 115, borderWidth: 1, borderColor: "rgba(255,172,204,0.42)", top: 62, left: 28 },
+  orbitDot: { position: "absolute", width: 8, height: 8, borderRadius: 4, backgroundColor: GOLD, top: -4, left: 108, shadowColor: GOLD, shadowRadius: 8, shadowOpacity: 0.9 },
+  orbitDotTwo: { position: "absolute", width: 5, height: 5, borderRadius: 3, backgroundColor: PINK, bottom: 8, right: 32, shadowColor: PINK, shadowRadius: 7, shadowOpacity: 0.9 },
+  orbGlow: { position: "absolute", width: 150, height: 150, borderRadius: 75, top: 38, left: 68, backgroundColor: "rgba(255,55,125,0.26)", shadowColor: PINK, shadowRadius: 28, shadowOpacity: 0.95, elevation: 15 },
+  orb: { position: "absolute", width: 132, height: 132, borderRadius: 66, top: 47, left: 77, backgroundColor: "rgba(104,12,57,0.58)", borderWidth: 1, borderColor: "rgba(255,202,221,0.58)", alignItems: "center", justifyContent: "center", shadowColor: PINK, shadowRadius: 22, shadowOpacity: 0.85, elevation: 14 },
+  orbHeart: { color: "#FF8CAF", fontSize: 49, lineHeight: 55, textShadowColor: "#FF2E78", textShadowRadius: 19 },
+  orbLine: { width: 47, height: 1, backgroundColor: "rgba(245,209,155,0.65)", marginTop: 3 },
+  orbNames: { flexDirection: "row-reverse", alignItems: "center", gap: 6, marginTop: 7 },
+  orbName: { color: "#FFE7EE", fontSize: 10, fontWeight: "800" },
+  orbAmp: { color: GOLD, fontSize: 11 },
   girl: { position: "absolute", left: 92, bottom: 12, width: 72, height: 164, alignItems: "center" },
   princessCrown: { color: "#170711", fontSize: 20, position: "absolute", top: -12, zIndex: 4 },
   girlHead: { width: 30, height: 35, borderRadius: 18, backgroundColor: "#150811", marginLeft: 10, zIndex: 2 },
