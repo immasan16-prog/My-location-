@@ -5,6 +5,7 @@ import {
   Alert,
   Animated,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -19,6 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const SONG = require("../../assets/audio/aishalak.mp3");
+const ROYAL_COUPLE = require("../../assets/royal-couple-silhouette.png");
 const PASSWORD = "1932024";
 const APK_URL = "https://github.com/immasan16-prog/My-location-/releases/latest/download/MyLove.apk";
 const STORAGE_KEY = "mylove_chat_messages_v1";
@@ -34,7 +36,29 @@ const BORDER = "rgba(255,255,255,0.18)";
 type Gate = "password" | "stop" | "inside";
 type ChatMessage = { id: string; author: "أمونة" | "حمودي"; text: string; time: string; reaction?: string };
 
-const romanticWords = ["عايشة", "لك", "أحلى", "سنين", "العمر", "يا ضي العين", "قلبي", "حنين", "غرام", "من أول يوم", "هواك", "حلمي", "أكون وياك", "عمري", "معاك", "باتمنك", "يا حبيبي", "بستناك", "قربني", "حبيبي", "شوقي", "حنان", "الأحزان", "روحي معاك", "قلبي مشغول"];
+const timedLyrics = [
+  [19.46, 26.84, "عايشة لك أحلى سنين في العمر يا ضي العين"],
+  [26.84, 34.36, "وبقلبي يا غالي حنين وغرام من أول يوم في هواك"],
+  [34.36, 41.9, "كان حلمي أكون وياك لو يوم من عمري معاك"],
+  [41.9, 49.2, "وكتير وأنا باتمنك يا حبيبي لقلبي وبستناك"],
+  [49.2, 58.78, "عايشة لك أحلى سنين في العمر يا ضي العين"],
+  [58.78, 66.74, "وبقلبي يا غالي حنين وغرام من أول يوم في هواك"],
+  [66.74, 73.88, "كان حلمي أكون وياك لو يوم من عمري معاك"],
+  [73.88, 80.94, "وكتير وأنا باتمنك يا حبيبي لقلبي وبستناك"],
+  [111.94, 115.66, "قربني حبيبي كمان"],
+  [115.66, 119.02, "أنا شوقي إليك والهان"],
+  [119.02, 121.94, "املأني يا دنيا حنان"],
+  [121.94, 126.46, "نسيني معاك كل الأحزان"],
+  [126.46, 130.759, "عشانك وأنا مهما أقول"],
+  [130.759, 134.08, "أنا روحي معاك على طول"],
+  [134.08, 137.3, "ده أنا قلبي كتير مشغول"],
+  [137.3, 141.62, "يا حبيب العمر بقالي زمان"],
+  [173.66, 181.12, "عايشة لك أحلى سنين في العمر يا ضي العين"],
+  [181.12, 189.04, "وبقلبي يا غالي حنين وغرام من أول يوم في هواك"],
+  [189.04, 196.2, "كان حلمي أكون وياك لو يوم من عمري معاك"],
+  [196.2, 203.24, "وكتير وأنا باتمنك يا حبيبي لقلبي وبستناك"],
+  [203.24, 219.74, "عايشة"],
+] as const;
 const reactions = ["💗", "🥰", "😭", "💔", "🙃"];
 
 export default function HomeScreen() {
@@ -45,6 +69,7 @@ export default function HomeScreen() {
   const [error, setError] = useState("");
   const [isPlaying, setIsPlaying] = useState(false);
   const [lyric, setLyric] = useState("");
+  const [lyricIndex, setLyricIndex] = useState(-1);
   const [hearts, setHearts] = useState<number[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
@@ -67,18 +92,17 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!isPlaying) {
       setLyric("");
+      setLyricIndex(-1);
       setHearts([]);
       return;
     }
-    let index = 0;
-    setLyric(romanticWords[0]);
-    const interval = setInterval(() => {
-      setLyric(romanticWords[Math.floor(Math.random() * romanticWords.length)]);
-      setHearts((current) => [...current.slice(-5), Date.now()]);
-      index += 1;
-    }, 720);
-    return () => clearInterval(interval);
-  }, [isPlaying]);
+    const nextIndex = timedLyrics.findIndex(([start, end]) => status.currentTime >= start && status.currentTime < end);
+    if (nextIndex !== lyricIndex) {
+      setLyricIndex(nextIndex);
+      setLyric(nextIndex >= 0 ? timedLyrics[nextIndex][2] : "");
+      if (nextIndex >= 0) setHearts((current) => [...current.slice(-5), Date.now()]);
+    }
+  }, [isPlaying, status.currentTime, lyricIndex]);
 
   useEffect(() => {
     if (status.didJustFinish) setIsPlaying(false);
@@ -145,7 +169,7 @@ export default function HomeScreen() {
             <View style={styles.songMeta}><Text style={styles.songName}>عيشالك</Text><Text style={styles.songArtist}>أمونة ♥ حمودي</Text><View style={styles.track}><View style={[styles.trackFill, { width: status.duration ? `${Math.min(100, (status.currentTime / status.duration) * 100)}%` : "0%" }]} /></View><Text style={styles.duration}>{formatTime(status.currentTime)} / {formatTime(status.duration)}</Text></View>
             <Pressable onPress={toggleSong} style={({ pressed }) => [styles.play, isPlaying && styles.playActive, pressed && styles.pressed]}><Text style={styles.playIcon}>{isPlaying ? "Ⅱ" : "▶"}</Text></Pressable>
           </View>
-          {isPlaying && <View style={styles.lyricStage}><Text style={styles.lyricText}>{lyric}</Text>{hearts.map((heart) => <FloatingHeart key={heart} />)}</View>}
+          {isPlaying && <View style={styles.lyricStage}>{lyric ? <FloatingWord key={`${lyricIndex}-${lyric}`} text={lyric} /> : null}{hearts.map((heart) => <FloatingHeart key={heart} />)}</View>}
         </View>
         <View style={styles.loveStatement}><Text style={styles.statementQuote}>“</Text><Text style={styles.statement}>ثلاث سنوات، وما زلت أختارك في كل مرة.</Text><Text style={styles.statementDate}>19.03.2024 · إلى الأبد</Text></View>
         <Pressable onPress={() => Linking.openURL(APK_URL)} style={({ pressed }) => [styles.apkButton, pressed && styles.pressed]}><Text style={styles.apkIcon}>↓</Text><View><Text style={styles.apkTitle}>تحميل التطبيق APK</Text><Text style={styles.apkSub}>خذه معك أينما ذهبت</Text></View></Pressable>
@@ -161,15 +185,9 @@ function GateScreen({ title, subtitle, value, setValue, button, onSubmit, error,
 }
 
 function ShadowScene({ active }: { active: boolean }) {
-  const hair = useRef(new Animated.Value(0)).current;
   const kiss = useRef(new Animated.Value(0)).current;
   const approach = useRef(new Animated.Value(0)).current;
   const dance = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const hairLoop = Animated.loop(Animated.sequence([Animated.timing(hair, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true }), Animated.timing(hair, { toValue: 0, duration: 1300, easing: Easing.inOut(Easing.sin), useNativeDriver: true })]));
-    hairLoop.start();
-    return () => hairLoop.stop();
-  }, [hair]);
   useEffect(() => {
     if (!active) { kiss.stopAnimation(); kiss.setValue(0); return; }
     const loop = Animated.loop(Animated.sequence([Animated.timing(kiss, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.quad), useNativeDriver: true }), Animated.delay(800), Animated.timing(kiss, { toValue: 0, duration: 0, useNativeDriver: true })]));
@@ -191,7 +209,7 @@ function ShadowScene({ active }: { active: boolean }) {
   }, [active, approach, dance]);
   const danceTilt = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: ["-5deg", "0deg", "5deg"] });
   const danceLift = dance.interpolate({ inputRange: [-1, 0, 1], outputRange: [2, 0, -2] });
-  return <View style={styles.scene}><View style={styles.moon} /><Animated.View style={[styles.girl, { transform: [{ translateY: danceLift }, { rotate: danceTilt }] }]}><Text style={styles.princessCrown}>♕</Text><View style={styles.girlHead} /><Animated.View style={[styles.hair, { transform: [{ rotate: hair.interpolate({ inputRange: [0, 1], outputRange: ["-8deg", "8deg"] }) }] }]} /><View style={styles.girlBody} /><View style={styles.girlDress}><View style={styles.dressRibbon} /></View></Animated.View><Animated.View style={[styles.man, { transform: [{ translateX: approach.interpolate({ inputRange: [0, 1], outputRange: [0, -54] }) }, { translateY: danceLift }, { rotate: danceTilt }] }]}><Text style={styles.princeCrown}>♔</Text><View style={styles.manHead} /><View style={styles.manBody}><View style={styles.princeCoat} /></View></Animated.View><Animated.Text style={[styles.kiss, { opacity: kiss.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateX: kiss.interpolate({ inputRange: [0, 1], outputRange: [-18, 118] }) }, { translateY: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [16, -20, 6] }) }, { scale: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1.15, 0.8] }) }] }]}>♥</Animated.Text><Text style={styles.sceneCaption}>{active ? "يقترب الأمير… ثم ترقص الأميرة حتى آخر نغمة" : "اضغط تشغيل… ودع الحكاية تتحرك"}</Text></View>;
+  return <View style={styles.scene}><View style={styles.moon} /><Animated.Image source={ROYAL_COUPLE} resizeMode="contain" style={[styles.royalCouple, { transform: [{ translateX: approach.interpolate({ inputRange: [0, 1], outputRange: [42, 0] }) }, { translateY: danceLift }, { rotate: danceTilt }, { scale: dance.interpolate({ inputRange: [-1, 0, 1], outputRange: [0.98, 1, 0.98] }) }] }]} /><Animated.Text style={[styles.kiss, { opacity: kiss.interpolate({ inputRange: [0, 0.15, 0.85, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateX: kiss.interpolate({ inputRange: [0, 1], outputRange: [-18, 118] }) }, { translateY: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [16, -20, 6] }) }, { scale: kiss.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.7, 1.15, 0.8] }) }] }]}>♥</Animated.Text><Text style={styles.sceneCaption}>{active ? "رقصة ملكية… حتى آخر نغمة" : "اضغط تشغيل… لتبدأ الحكاية"}</Text></View>;
 }
 
 function AmbientSnow({ active }: { active: boolean }) {
@@ -202,7 +220,7 @@ function AmbientSnow({ active }: { active: boolean }) {
 function Snow({ index }: { index: number }) {
   const fall = useRef(new Animated.Value(-30)).current;
   useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([Animated.delay(index * 180), Animated.timing(fall, { toValue: 900, duration: 6800 + index * 210, easing: Easing.linear, useNativeDriver: true }), Animated.timing(fall, { toValue: -30, duration: 0, useNativeDriver: true })]));
+    const loop = Animated.loop(Animated.sequence([Animated.delay(index * 260), Animated.timing(fall, { toValue: 900, duration: 14500 + index * 360, easing: Easing.linear, useNativeDriver: true }), Animated.timing(fall, { toValue: -30, duration: 0, useNativeDriver: true })]));
     loop.start();
     return () => loop.stop();
   }, [fall, index]);
@@ -213,6 +231,12 @@ function FloatingHeart() {
   const progress = useRef(new Animated.Value(0)).current;
   useEffect(() => { Animated.timing(progress, { toValue: 1, duration: 1700, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(); }, [progress]);
   return <Animated.Text style={[styles.floatingHeart, { opacity: progress.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 0] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [15, -90] }) }, { translateX: progress.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -16, 12] }) }] }]}>♥</Animated.Text>;
+}
+
+function FloatingWord({ text }: { text: string }) {
+  const progress = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(progress, { toValue: 1, duration: 2100, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(); }, [progress]);
+  return <Animated.Text style={[styles.floatingWord, { opacity: progress.interpolate({ inputRange: [0, 0.12, 0.76, 1], outputRange: [0, 1, 1, 0] }), transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [32, -82] }) }, { translateX: progress.interpolate({ inputRange: [0, 0.45, 1], outputRange: [0, -20, 18] }) }, { scale: progress.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0.72, 1, 0.9] }) }] }]}>{text}</Animated.Text>;
 }
 
 function Chat({ messages, draft, setDraft, sendMessage, selectedMessage, setSelectedMessage, deleteMessage, reactToMessage }: { messages: ChatMessage[]; draft: string; setDraft: (value: string) => void; sendMessage: () => void; selectedMessage: string | null; setSelectedMessage: (id: string | null) => void; deleteMessage: (id: string) => void; reactToMessage: (id: string, reaction: string) => void }) {
@@ -234,6 +258,7 @@ const styles = StyleSheet.create({
   heroText: { color: SOFT, fontSize: 13, lineHeight: 23, textAlign: "right", marginTop: 10 },
   scene: { height: 235, marginTop: 9, position: "relative", alignItems: "center", justifyContent: "flex-end" },
   moon: { position: "absolute", width: 155, height: 155, borderRadius: 78, backgroundColor: "rgba(201,70,112,0.18)", top: 18, left: 65 },
+  royalCouple: { position: "absolute", width: 260, height: 193, bottom: 14, left: 36 },
   girl: { position: "absolute", left: 92, bottom: 12, width: 72, height: 164, alignItems: "center" },
   princessCrown: { color: "#170711", fontSize: 20, position: "absolute", top: -12, zIndex: 4 },
   girlHead: { width: 30, height: 35, borderRadius: 18, backgroundColor: "#150811", marginLeft: 10, zIndex: 2 },
@@ -267,6 +292,7 @@ const styles = StyleSheet.create({
   playIcon: { color: "#FFF", fontSize: 18, fontWeight: "800" },
   lyricStage: { height: 105, alignItems: "center", justifyContent: "center", marginTop: 4, overflow: "hidden" },
   lyricText: { color: "#FFB8CB", fontSize: 25, fontWeight: "900", textShadowColor: "#F36A91", textShadowRadius: 10 },
+  floatingWord: { position: "absolute", color: "#FFB8CB", fontSize: 19, lineHeight: 27, maxWidth: 260, textAlign: "center", fontWeight: "900", textShadowColor: "#F36A91", textShadowRadius: 12 },
   floatingHeart: { position: "absolute", color: "#B82D5B", fontSize: 22, right: 75, bottom: 5, textShadowColor: "#F36A91", textShadowRadius: 9 },
   loveStatement: { backgroundColor: "rgba(245,209,155,0.08)", borderWidth: 1, borderColor: "rgba(245,209,155,0.2)", borderRadius: 25, padding: 20, marginTop: 17 },
   statementQuote: { color: GOLD, fontSize: 38, height: 31, textAlign: "right" },
